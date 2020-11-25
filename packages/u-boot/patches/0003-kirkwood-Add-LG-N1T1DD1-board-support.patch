@@ -1,0 +1,783 @@
+From d096fd864996b8a28d5b9566549002e6ac64cf7a Mon Sep 17 00:00:00 2001
+From: Fredrik Sy <fredrik.sy@icloud.com>
+Date: Wed, 25 Nov 2020 15:59:44 +0000
+Subject: [PATCH 3/3] kirkwood: Add LG N1T1DD1 board support
+
+---
+ arch/arm/dts/kirkwood-n1t1dd1.dts | 241 ++++++++++++++++++++++++++++++
+ board/lg/n1t1dd1/Kconfig          |  12 ++
+ board/lg/n1t1dd1/Makefile         |   7 +
+ board/lg/n1t1dd1/kwbimage.cfg     |  40 +++++
+ board/lg/n1t1dd1/n1t1dd1.c        | 133 +++++++++++++++++
+ board/lg/n1t1dd1/n1t1dd1.h        |  57 +++++++
+ configs/n1t1dd1_defconfig         | 150 +++++++++++++++++++
+ include/configs/n1t1dd1.h         |  65 ++++++++
+ 8 files changed, 705 insertions(+)
+ create mode 100644 arch/arm/dts/kirkwood-n1t1dd1.dts
+ create mode 100644 board/lg/n1t1dd1/Kconfig
+ create mode 100644 board/lg/n1t1dd1/Makefile
+ create mode 100644 board/lg/n1t1dd1/kwbimage.cfg
+ create mode 100644 board/lg/n1t1dd1/n1t1dd1.c
+ create mode 100644 board/lg/n1t1dd1/n1t1dd1.h
+ create mode 100644 configs/n1t1dd1_defconfig
+ create mode 100644 include/configs/n1t1dd1.h
+
+diff --git a/arch/arm/dts/kirkwood-n1t1dd1.dts b/arch/arm/dts/kirkwood-n1t1dd1.dts
+new file mode 100644
+index 0000000000..342c387f2c
+--- /dev/null
++++ b/arch/arm/dts/kirkwood-n1t1dd1.dts
+@@ -0,0 +1,241 @@
++/*
++ * Device tree file for LG N1T1DD1
++ *
++ * Copyright (C) 2016 Aron Koszo <koszoaron@gmail.com>
++ *                         bodhi <mibodhi@gmail.com>
++ */
++
++/dts-v1/;
++
++#include "kirkwood.dtsi"
++#include "kirkwood-6281.dtsi"
++
++/ {
++	model = "LG N1T1DD1";
++	compatible = "lg,n1t1dd1", "marvell,kirkwood-88f6281", "marvell,kirkwood";
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x8000000>;
++	};
++
++	chosen {
++		bootargs = "console=ttyS0,115200n8 earlyprintk root=/dev/sda1 rootdelay=10";
++		stdout-path = &uart0;
++	};
++
++	aliases {
++		spi0 = &spi0;
++	};
++
++	ocp@f1000000 {
++		pinctrl: pin-controller@10000 {
++			pmx_uart0: pmx-uart0 {
++				marvell,pins = "mpp5", "mpp4";
++				marvell,function = "uart0";
++			};
++			pmx_power_off: pmx-power-off {
++				marvell,pins = "mpp7";
++				marvell,function = "gpo";
++			};
++			pmx_power_usb: pmx-power-usb {
++				marvell,pins = "mpp10";
++				marvell,function = "gpo";
++			};
++			pmx_button_ext_hdd: pmx-button-ext-hdd {
++				marvell,pins = "mpp11";
++				marvell,function = "gpio";
++			};
++			pmx_power_sata0: pmx-power-sata0 {
++				marvell,pins = "mpp15";
++				marvell,function = "gpio";
++			};
++			pmx_button_ext_odd: pmx-button-ext-odd {
++				marvell,pins = "mpp16";
++				marvell,function = "gpio";
++			};
++			pmx_power_sata1: pmx-power-sata1 {
++				marvell,pins = "mpp17";
++				marvell,function = "gpio";
++			};
++			pmx_power_usb_sense: pmx-power-usb-sense {
++				marvell,pins = "mpp26";
++				marvell,function = "gpio";
++			};
++			pmx_button_power: pmx-button-power {
++				marvell,pins = "mpp29";
++				marvell,function = "gpio";
++			};
++			pmx_led_usb: pmx-led-usb {
++				marvell,pins = "mpp30";
++				marvell,function = "gpio";
++			};
++			pmx_button_backup: pmx-button-backup {
++				marvell,pins = "mpp31";
++				marvell,function = "gpio";
++			};
++			pmx_led_odd: pmx-led-odd {
++				marvell,pins = "mpp34";
++				marvell,function = "gpio";
++			};
++			pmx_led_hdd: pmx-led-hdd {
++				marvell,pins = "mpp35";
++				marvell,function = "gpio";
++			};
++		};
++
++		serial@12000 {
++			status = "ok";
++		};
++
++		spi@10600 {
++			status = "okay";
++
++			flash@0 {
++				#address-cells = <1>;
++				#size-cells = <1>;
++				compatible = "mxicy,mx25l4005a", "jedec,spi-nor";
++				reg = <0>;
++				spi-max-frequency = <20000000>;
++				mode = <0>;
++
++				partition@0 {
++					reg = <0x0 0x78000>;
++					label = "u-boot";
++				};
++
++				partition@78000 {
++					reg = <0x78000 0x1000>;
++					label = "u-boot env";
++				};
++			};
++		};
++
++		sata@80000 {
++			status = "okay";
++			nr-ports = <2>;
++		};
++	};
++
++	gpio-leds {
++		compatible = "gpio-leds";
++		pinctrl-0 = < &pmx_led_hdd &pmx_led_odd &pmx_led_usb >;
++		pinctrl-names = "default";
++
++		hdd {
++			label = "status:white:hdd";
++			gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "ide-disk2";
++		};
++		odd {
++			label = "status:white:odd";
++			gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "ide-disk1";
++		};
++		usb {
++			label = "status:white:usb";
++			gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
++		};
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		pinctrl-0 = <&pmx_button_ext_hdd &pmx_button_ext_odd &pmx_button_power &pmx_button_backup>;
++		pinctrl-names = "default";
++
++		button@1 {
++			label = "EXT HDD";
++			linux,code = <KEY_FN_1>;
++			linux,input-type = <5>;
++			debounce-interval = <1000>;
++			gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
++		};
++		button@2 {
++			label = "EXT ODD";
++			linux,code = <KEY_FN_2>;
++			linux,input-type = <5>;
++			debounce-interval = <1000>;
++			gpios = <&gpio0 16 GPIO_ACTIVE_LOW>;
++		};
++		button@3 {
++			label = "Power";
++			linux,code = <KEY_POWER>;
++			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
++		};
++		button@4 {
++			label = "Backup";
++			linux,code = <KEY_COPY>;
++			gpios = <&gpio0 31 GPIO_ACTIVE_HIGH>;
++		};
++
++	};
++
++	gpio-poweroff {
++		compatible = "gpio-poweroff";
++		pinctrl-0 = <&pmx_power_off>;
++		pinctrl-names = "default";
++		gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
++	};
++
++	regulators {
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		pinctrl-0 = <&pmx_power_usb &pmx_power_sata0 &pmx_power_sata1>;
++		pinctrl-names = "default";
++
++		usb_power: regulator@1 {
++			compatible = "regulator-fixed";
++			reg = <1>;
++			regulator-name = "USB Power";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			enable-active-high;
++			regulator-always-on;
++			regulator-boot-on;
++			gpio = <&gpio0 10 GPIO_ACTIVE_HIGH>;
++		};
++
++		sata0_power: regulator@2 {
++			compatible = "regulator-fixed";
++			reg = <2>;
++			regulator-name = "SATA0 Power";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			enable-active-high;
++			regulator-always-on;
++			regulator-boot-on;
++			gpio = <&gpio0 15 GPIO_ACTIVE_HIGH>;
++		};
++
++		sata1_power: regulator@3 {
++			compatible = "regulator-fixed";
++			reg = <3>;
++			regulator-name = "SATA1 Power";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			enable-active-high;
++			regulator-always-on;
++			regulator-boot-on;
++			gpio = <&gpio0 17 GPIO_ACTIVE_HIGH>;
++		};
++	};
++};
++
++&mdio {
++	status = "okay";
++
++	ethphy0: ethernet-phy@8 {
++		reg = <8>;
++	};
++};
++
++&eth0 {
++	status = "okay";
++
++	ethernet0-port@0 {
++		phy-handle = <&ethphy0>;
++	};
++};
+diff --git a/board/lg/n1t1dd1/Kconfig b/board/lg/n1t1dd1/Kconfig
+new file mode 100644
+index 0000000000..eefa254724
+--- /dev/null
++++ b/board/lg/n1t1dd1/Kconfig
+@@ -0,0 +1,12 @@
++if TARGET_N1T1DD1
++
++config SYS_BOARD
++	default "n1t1dd1"
++
++config SYS_VENDOR
++	default "lg"
++
++config SYS_CONFIG_NAME
++	default "n1t1dd1"
++
++endif
+diff --git a/board/lg/n1t1dd1/Makefile b/board/lg/n1t1dd1/Makefile
+new file mode 100644
+index 0000000000..fdb87ba0a0
+--- /dev/null
++++ b/board/lg/n1t1dd1/Makefile
+@@ -0,0 +1,7 @@
++# SPDX-License-Identifier: GPL-2.0+
++#
++# LG N1T1DD1
++#
++# Copyright (C) 2020 Fredrik Sy <fredrik.sy@icloud.com>
++
++obj-y := n1t1dd1.o
+\ No newline at end of file
+diff --git a/board/lg/n1t1dd1/kwbimage.cfg b/board/lg/n1t1dd1/kwbimage.cfg
+new file mode 100644
+index 0000000000..b18238b222
+--- /dev/null
++++ b/board/lg/n1t1dd1/kwbimage.cfg
+@@ -0,0 +1,40 @@
++# SPDX-License-Identifier:      GPL-2.0+
++#
++# Copyright (C) 2020 Fredrik Sy <fredrik.sy@icloud.com>
++#
++# Refer doc/README.kwbimage for more details about how-to configure
++# and create kirkwood boot image
++#
++
++# Boot Media configurations
++BOOT_FROM	spi
++
++# SOC registers configuration using bootrom header extension
++# Maximum KWBIMAGE_MAX_CONFIG configurations allowed
++
++DATA 0xFFD100e0 0x1b1b1b9b
++DATA 0xFFD01400 0x43000A26
++DATA 0xFFD01404 0x36543000
++DATA 0xFFD01408 0x2202444e
++DATA 0xFFD0140C 0x00000a2a
++DATA 0xFFD01410 0x000000cd
++DATA 0xFFD01414 0x00000000
++DATA 0xFFD01418 0x00000000
++DATA 0xFFD0141C 0x00000652
++DATA 0xFFD01420 0x00000004
++DATA 0xFFD01424 0x0000F17F
++DATA 0xFFD01504 0x07FFFFF1
++DATA 0xFFD01508 0x00000000
++DATA 0xFFD0150C 0x00000000
++DATA 0xFFD01514 0x00000000
++DATA 0xFFD0151C 0x00000000
++DATA 0xFFD01494 0x00010000
++DATA 0xFFD01498 0x00000000
++DATA 0xFFD0149C 0x0000E40f
++DATA 0xFFD01480 0x00000001
++DATA 0xFFD10418 0x000c0282
++DATA 0xFFD1041c 0x00010305
++DATA 0xFFD10470 0x01c00541
++DATA 0xFFD20134 0x66666666
++DATA 0xFFD20138 0x66666666
++DATA 0x0 0x0
+diff --git a/board/lg/n1t1dd1/n1t1dd1.c b/board/lg/n1t1dd1/n1t1dd1.c
+new file mode 100644
+index 0000000000..e683773f0e
+--- /dev/null
++++ b/board/lg/n1t1dd1/n1t1dd1.c
+@@ -0,0 +1,133 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * LG N1T1DD1
++ *
++ * Copyright (C) 2020 Fredrik Sy <fredrik.sy@icloud.com>
++ */
++
++#include <common.h>
++#include <init.h>
++#include <miiphy.h>
++#include <net.h>
++#include <asm/mach-types.h>
++#include <asm/arch/soc.h>
++#include <asm/arch/mpp.h>
++#include <asm/arch/cpu.h>
++#include <asm/io.h>
++#include "n1t1dd1.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++int board_early_init_f(void)
++{
++	/*
++	 * default gpio configuration
++	 */
++	mvebu_config_gpio(N1T1DD1_OE_VAL_LOW, N1T1DD1_OE_VAL_HIGH,
++			  N1T1DD1_OE_LOW, N1T1DD1_OE_HIGH);
++
++	/* Multi-Purpose Pins Functionality configuration */
++	static const u32 kwmpp_config[] = {
++		MPP0_SPI_SCn,
++		MPP1_SPI_MOSI,
++		MPP2_SPI_SCK,
++		MPP3_SPI_MISO,
++		MPP4_UART0_RXD,
++		MPP5_UART0_TXD,
++		MPP6_SYSRST_OUTn,
++		MPP7_GPO,
++		MPP8_TW_SDA,
++		MPP9_TW_SCK,
++		MPP10_GPO,
++		MPP11_GPIO,
++		MPP12_GPO,
++		MPP13_GPIO,
++		MPP14_GPIO,
++		MPP15_GPIO,
++		MPP16_GPIO,
++		MPP17_GPIO,
++		MPP18_GPO,
++		MPP19_GPO,
++		MPP20_GPIO,
++		MPP21_GPIO,
++		MPP22_GPIO,
++		MPP23_GPIO,
++		MPP24_GPIO,
++		MPP25_GPIO,
++		MPP26_GPIO,
++		MPP27_GPIO,
++		MPP28_GPIO,
++		MPP29_GPIO,
++		MPP30_GPIO,
++		MPP31_GPIO,
++		MPP32_GPIO,
++		MPP33_GPIO,
++		MPP34_SATA1_ACTn,
++		MPP35_SATA0_ACTn,
++		MPP36_GPIO,
++		MPP37_GPIO,
++		MPP38_GPIO,
++		MPP39_GPIO,
++		MPP40_GPIO,
++		MPP41_GPIO,
++		MPP42_GPIO,
++		MPP43_GPIO,
++		MPP44_GPIO,
++		MPP45_GPIO,
++		MPP46_GPIO,
++		MPP47_GPIO,
++		MPP48_GPIO,
++		MPP49_GPIO,
++		0
++	};
++	kirkwood_mpp_conf(kwmpp_config, NULL);
++	return 0;
++}
++
++int board_init(void)
++{
++	/*
++	 * arch number of board
++	 */
++	gd->bd->bi_arch_number = MACH_TYPE_RD88F6281;
++
++	/* adress of boot parameters */
++	gd->bd->bi_boot_params = mvebu_sdram_bar(0) + 0x100;
++
++	return 0;
++}
++
++#ifdef CONFIG_RESET_PHY_R
++/* Configure and enable MV88E1116 PHY */
++void reset_phy(void)
++{
++	u16 reg;
++	u16 devadr;
++	char *name = "ethernet-controller@72000";
++
++	if (miiphy_set_current_dev(name))
++		return;
++
++	/* command to read PHY dev address */
++	if (miiphy_read(name, 0xEE, 0xEE, (u16 *)&devadr)) {
++		printf("Err..%s could not read PHY dev address\n",
++			   __func__);
++		return;
++	}
++
++	/*
++	 * Enable RGMII delay on Tx and Rx for CPU port
++	 * Ref: sec 4.7.2 of chip datasheet
++	 */
++	miiphy_write(name, devadr, MV88E1116_PGADR_REG, 2);
++	miiphy_read(name, devadr, MV88E1116_MAC_CTRL_REG, &reg);
++	reg |= (MV88E1116_RGMII_RXTM_CTRL | MV88E1116_RGMII_TXTM_CTRL);
++	miiphy_write(name, devadr, MV88E1116_MAC_CTRL_REG, reg);
++	miiphy_write(name, devadr, MV88E1116_PGADR_REG, 0);
++
++	/* reset the phy */
++	miiphy_reset(name, devadr);
++
++	printf("88E1116 Initialized on %s\n", name);
++}
++#endif /* CONFIG_RESET_PHY_R */
+diff --git a/board/lg/n1t1dd1/n1t1dd1.h b/board/lg/n1t1dd1/n1t1dd1.h
+new file mode 100644
+index 0000000000..2910269c4c
+--- /dev/null
++++ b/board/lg/n1t1dd1/n1t1dd1.h
+@@ -0,0 +1,57 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++/*
++ * LG N1T1DD1
++ *
++ * Copyright (C) 2020 Fredrik Sy <fredrik.sy@icloud.com>
++ */
++
++#ifndef _N1T1DD1_H_
++#define _N1T1DD1_H_
++
++#define DEVICE_SPI_SIZE		0x80000
++
++#define BIT0				0x00000001
++#define BIT1				0x00000002
++#define BIT2				0x00000004
++#define BIT3				0x00000008
++#define BIT4				0x00000010
++#define BIT5				0x00000020
++#define BIT6				0x00000040
++#define BIT7				0x00000080
++#define BIT8				0x00000100
++#define BIT9				0x00000200
++#define BIT10				0x00000400
++#define BIT11				0x00000800
++#define BIT12				0x00001000
++#define BIT13				0x00002000
++#define BIT14				0x00004000
++#define BIT15				0x00008000
++#define BIT16				0x00010000
++#define BIT17				0x00020000
++#define BIT18				0x00040000
++#define BIT19				0x00080000
++#define BIT20				0x00100000
++#define BIT21				0x00200000
++#define BIT22				0x00400000
++#define BIT23				0x00800000
++#define BIT24				0x01000000
++#define BIT25				0x02000000
++#define BIT26				0x04000000
++#define BIT27				0x08000000
++#define BIT28				0x10000000
++#define BIT29				0x20000000
++#define BIT30				0x40000000
++#define BIT31				0x80000000
++
++#define N1T1DD1_OE_LOW			(BIT11 | BIT12 |BIT13 |BIT14 |BIT16 |BIT18 |BIT19 |BIT20 | BIT21 | BIT22 | BIT23 | BIT24 | BIT25 | BIT26 | BIT27 | BIT29 | BIT30 | BIT31)
++#define N1T1DD1_OE_HIGH			(BIT0 | BIT1)
++#define N1T1DD1_OE_VAL_LOW		(BIT7 | BIT10 | BIT15 | BIT17 | BIT28)
++#define N1T1DD1_OE_VAL_HIGH		(0)
++
++/* PHY related */
++#define MV88E1116_MAC_CTRL_REG		21
++#define MV88E1116_PGADR_REG			22
++#define MV88E1116_RGMII_TXTM_CTRL	(1 << 4)
++#define MV88E1116_RGMII_RXTM_CTRL	(1 << 5)
++
++#endif /* _N1T1DD1_H_ */
+\ No newline at end of file
+diff --git a/configs/n1t1dd1_defconfig b/configs/n1t1dd1_defconfig
+new file mode 100644
+index 0000000000..e0d861bf1d
+--- /dev/null
++++ b/configs/n1t1dd1_defconfig
+@@ -0,0 +1,150 @@
++#
++# Compiler
++#
++CONFIG_ARM=y
++CONFIG_SYS_DCACHE_OFF=y
++
++#
++# ARM architecture
++#
++CONFIG_ARCH_CPU_INIT=y
++CONFIG_ARCH_KIRKWOOD=y
++CONFIG_SYS_TEXT_BASE=0x600000
++CONFIG_TARGET_N1T1DD1=y
++CONFIG_ENV_SIZE=0x1000
++CONFIG_ENV_OFFSET=0x78000
++CONFIG_ENV_SECT_SIZE=0x1000
++CONFIG_IDENT_STRING="\nLG N1T1DD1"
++
++#
++# ARM debug
++#
++CONFIG_DEFAULT_DEVICE_TREE="kirkwood-n1t1dd1"
++
++#
++# General setup
++#
++# CONFIG_SYS_MALLOC_F is not set
++
++#
++# Command line interface
++#
++CONFIG_HUSH_PARSER=y
++CONFIG_SYS_PROMPT="N1T1DD1> "
++
++#
++# Boot commands
++#
++CONFIG_CMD_BOOTZ=y
++CONFIG_CMD_FDT=y
++
++#
++# Device access commands
++#
++CONFIG_CMD_GPT=y
++CONFIG_CMD_IDE=y
++CONFIG_CMD_USB=y
++
++#
++# Android support commands
++#
++CONFIG_CMD_DHCP=y
++CONFIG_CMD_MII=y
++CONFIG_CMD_PING=y
++
++#
++# Filesystem commands
++#
++CONFIG_CMD_EXT2=y
++CONFIG_CMD_EXT4=y
++CONFIG_CMD_FAT=y
++
++#
++# Partition Types
++#
++CONFIG_ISO_PARTITION=y
++CONFIG_EFI_PARTITION=y
++
++#
++# Device Tree Control
++#
++CONFIG_OF_CONTROL=y
++
++#
++# Environment
++#
++CONFIG_ENV_OVERWRITE=y
++CONFIG_ENV_IS_IN_SPI_FLASH=y
++CONFIG_ENV_ADDR=0x78000
++
++#
++# Generic Driver Options
++#
++CONFIG_DM=y
++
++#
++# SATA/SCSI device support
++#
++CONFIG_MVSATA_IDE=y
++
++#
++# Bus devices
++#
++CONFIG_BLK=y
++
++#
++# MMC Host controller Support
++#
++# CONFIG_MMC is not set
++
++#
++# MTD Support
++#
++CONFIG_MTD=y
++
++#
++# SPI Flash Support
++#
++CONFIG_DM_SPI_FLASH=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_MACRONIX=y
++
++#
++# UBI support
++#
++CONFIG_DM_ETH=y
++CONFIG_MVGBE=y
++CONFIG_MII=y
++
++#
++# Serial drivers
++#
++CONFIG_SYS_NS16550=y
++
++#
++# SOC (System On Chip) specific Drivers
++#
++CONFIG_SPI=y
++CONFIG_DM_SPI=y
++CONFIG_KIRKWOOD_SPI=y
++
++#
++# TPM support
++#
++CONFIG_USB=y
++CONFIG_DM_USB=y
++
++#
++# USB Host Controller Drivers
++#
++CONFIG_USB_EHCI_HCD=y
++
++#
++# USB peripherals
++#
++CONFIG_USB_STORAGE=y
++
++#
++# Compression Support
++#
++CONFIG_OF_LIBFDT=y
+\ No newline at end of file
+diff --git a/include/configs/n1t1dd1.h b/include/configs/n1t1dd1.h
+new file mode 100644
+index 0000000000..038e2183df
+--- /dev/null
++++ b/include/configs/n1t1dd1.h
+@@ -0,0 +1,65 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++/*
++ * LG N1T1DD1
++ *
++ * Copyright (C) 2020 Fredrik Sy <fredrik.sy@icloud.com>
++ */
++
++#ifndef _CONFIG_N1T1DD1_H
++#define _CONFIG_N1T1DD1_H
++
++/*
++ * High Level Configuration Options (easy to change)
++ */
++#define CONFIG_FEROCEON_88FR131	1	/* CPU Core subversion */
++#define CONFIG_KW88F6281		1	/* SOC Name */
++#define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
++
++/*
++ * mv-common.h should be defined after CMD configs since it used them
++ * to enable certain macros
++ */
++#include "mv-common.h"
++
++/*
++ * Default environment variables
++ */
++#define CONFIG_BOOTCOMMAND \
++	"setenv bootargs ${console} ${mtdparts} ${bootargs_root}; " \
++	"usb start; " \
++	"ext4load usb 0:1 0x800000 /boot/uImage; " \
++	"ext4load usb 0:1 0x1100000 /boot/uInitrd; " \
++	"ext4load usb 0:1 0x1c00000 /boot/kirkwood-n1t1dd1.dtb; " \
++	"bootm 0x800000 0x1100000 0x1c00000"
++
++#define CONFIG_EXTRA_ENV_SETTINGS \
++	"bootargs_root=root=/dev/sda1 rw\0" \
++	"console=console=ttyS0,115200\0" \
++	"ethact=ethernet-controller@72000\0" \
++	"ethaddr=00:E0:91:81:4E:EE\0" \
++	"ethprime=ethernet-controller@72000\0" \
++	"ethmtu=1500\0" \
++	"ipaddr=10.177.190.59\0" \
++	"loadaddr=0x02000000\0" \
++	"mainlineLinux=yes\0" \
++	"mtdparts=spi_flash:0x78000@0(u-boot),0x1000@0x78000(u-boot env)\0" \
++	"netmask=255.255.254.0\0" \
++	"serverip=10.177.191.39\0"
++
++/*
++ * Ethernet Driver configuration
++ */
++#ifdef CONFIG_CMD_NET
++#define CONFIG_MVGBE_PORTS	{1, 0}	/* enable port 0 only */
++#define CONFIG_PHY_BASE_ADR	0
++#endif /* CONFIG_CMD_NET */
++
++/*
++ * SATA Driver configuration
++ */
++#ifdef CONFIG_MVSATA_IDE
++#define CONFIG_SYS_ATA_IDE0_OFFSET      MV_SATA_PORT0_OFFSET
++#define CONFIG_SYS_ATA_IDE1_OFFSET      MV_SATA_PORT1_OFFSET
++#endif /* CONFIG_MVSATA_IDE */
++
++#endif /* _CONFIG_N1T1DD1_H */
+-- 
+2.20.1
+
